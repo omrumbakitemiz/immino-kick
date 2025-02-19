@@ -49,6 +49,7 @@ export default function CallbackPage() {
           setMessage(`Error: ${data.error || "Unknown error"}`);
         }
       } catch (error) {
+        console.error(error);
         setMessage("Failed to exchange code for token.");
       }
     }
