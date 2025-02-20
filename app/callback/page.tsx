@@ -41,7 +41,7 @@ export default function CallbackPage() {
         const data = await response.json();
 
         if (data.access_token) {
-          setMessage(`Access Token: ${data.access_token}`);
+          setMessage('Authentication successfully completed! 🤙');
           sessionStorage.setItem("access_token", data.access_token);
           sessionStorage.setItem("refresh_token", data.refresh_token);
           sessionStorage.setItem("expires_in", data.expires_in);
@@ -55,15 +55,19 @@ export default function CallbackPage() {
     }
 
     fetchToken();
-  }, [code]);
+  }, [code, state]);
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>OAuth Callback</h1>
+    <div className="flex flex-col gap-y-6 p-4 items-center">
       <p>{message}</p>
 
       {/* back to home page*/}
-      <Link href="/">Return to Home</Link>
+      <Link
+        href="/"
+        className="w-fit px-6 py-3 bg-amber-500 hover:bg-amber-500 rounded-md text-white font-semibold transition duration-300"
+      >
+        Return to Home
+      </Link>
 
       {/*refresh token*/}
     </div>
