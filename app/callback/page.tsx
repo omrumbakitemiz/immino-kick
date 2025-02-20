@@ -10,6 +10,13 @@ export default function CallbackPage() {
   const state = searchParams.get("state");
   const [message, setMessage] = useState("Processing...");
 
+  // Remove query parameters from the URL for better security
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => {
     if (!code) {
       setMessage("No authorization code found.");
@@ -41,7 +48,7 @@ export default function CallbackPage() {
         const data = await response.json();
 
         if (data.access_token) {
-          setMessage('Authentication successfully completed! 🤙');
+          setMessage("Authentication successfully completed! 🤙");
           sessionStorage.setItem("access_token", data.access_token);
           sessionStorage.setItem("refresh_token", data.refresh_token);
           sessionStorage.setItem("expires_in", data.expires_in);

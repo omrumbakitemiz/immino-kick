@@ -1,7 +1,7 @@
 "use client";
 
 import { generatePKCE } from "@/lib/pkce";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SurveyPage from "@/app/survey/page";
 import ChatMessages from "@/components/chat-messages";
 
@@ -12,6 +12,8 @@ const AUTH_ENDPOINT = process.env.NEXT_PUBLIC_AUTH_ENDPOINT as string;
 export default function Home() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  const [clickCount, setClickCount] = useState(0);
+  const clickTimerRef = useRef<NodeJS.Timeout>(null);
 
   useEffect(() => {
     async function refreshAccessToken() {
@@ -78,12 +80,36 @@ export default function Home() {
     window.location.href = url.toString();
   }
 
+  const handleAuthenticatedClick = () => {
+    // If this is the first click, start the 5-second timer
+    if (clickCount === 0) {
+      clickTimerRef.current = setTimeout(() => {
+        setClickCount(0);
+        clickTimerRef.current = null;
+      }, 5000);
+    }
+
+    setClickCount((prevCount) => {
+      const newCount = prevCount + 1;
+      if (newCount >= 5) {
+        // If reached 5 clicks within 5 seconds, clear sessionStorage and reload page
+        if (clickTimerRef.current) {
+          clearTimeout(clickTimerRef.current);
+        }
+        sessionStorage.clear();
+        window.location.reload();
+      }
+      return newCount;
+    });
+  };
+
+
   return (
     <div className="p-4">
       {accessToken ? (
         <div className="flex flex-col space-y-4">
           <div className="text-end">
-            <p>Authenticated ✅</p>
+            <p onClick={handleAuthenticatedClick} className="cursor-pointer select-none">Authenticated ✅</p>
           </div>
 
           <div className="grid grid-cols-4 gap-4">
