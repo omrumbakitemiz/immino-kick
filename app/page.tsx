@@ -4,7 +4,8 @@ import { generatePKCE } from "@/lib/pkce";
 import { useEffect, useState } from "react";
 import Subscriptions from "@/components/subscriptions";
 import SubscribeEvents from "@/components/subscribe-events";
-import ChatMessages from "@/components/chat-messages";
+// import ChatMessages from "@/components/chat-messages";
+import SurveyPage from "@/app/survey/page";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID as string;
 const REDIRECT_URI = process.env.NEXT_PUBLIC_REDIRECT_URI as string;
@@ -92,7 +93,9 @@ export default function Home() {
 
           <SubscribeEvents />
 
-          <ChatMessages />
+          {/*<ChatMessages />*/}
+
+          <SurveyPage />
         </div>
       ) : (
         <div>
