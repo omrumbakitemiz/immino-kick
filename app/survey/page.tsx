@@ -7,8 +7,6 @@ interface VoteCounts {
 }
 
 export default function SurveyPage() {
-  const accessToken = sessionStorage.getItem('access_token');
-
   // Survey creation states
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
@@ -38,6 +36,8 @@ export default function SurveyPage() {
   }, [votingActive]);
 
   const handleStartSurvey = async () => {
+    const accessToken = sessionStorage.getItem('access_token');
+
     if (!question.trim() || options.some(opt => !opt.trim())) {
       alert("Please enter a valid question and all options.");
       return;
