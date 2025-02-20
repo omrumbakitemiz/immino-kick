@@ -43,14 +43,14 @@ export default function WebhookDataPage() {
   }, []);
 
   return (
-    <div className="p-6 bg-black min-h-screen text-white">
-      <h1 className="text-2xl font-bold mb-4">Kick Chat Messages</h1>
+    <div className="p-6 bg-black min-h-screen text-white rounded-md">
+      <h1 className="text-2xl font-bold mb-4">Chat</h1>
       <div className="max-h-[500px] overflow-y-auto border border-gray-700 rounded-lg p-4 bg-gray-900">
-        {messages.length === 0 ? (
+        {messages?.length === 0 ? (
           <p className="text-gray-400">No chat messages received yet.</p>
         ) : (
           <ul className="space-y-4">
-            {messages.map((msg) => (
+            {messages?.map((msg) => (
               <li key={msg.message_id} className="border border-gray-700 p-4 rounded bg-gray-800 flex items-center space-x-4">
                 <Image
                   src={msg.sender.profile_picture}

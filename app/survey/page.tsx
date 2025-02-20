@@ -104,7 +104,7 @@ export default function SurveyPage() {
   };
 
   return (
-    <div className="p-6 bg-black min-h-screen text-white flex flex-col items-center space-y-6">
+    <div className="p-6 bg-black min-h-screen text-white flex flex-col items-center space-y-6 rounded-md">
       <h1 className="text-3xl font-bold">Kick Chat Survey</h1>
 
       {/* Survey Creation Form */}
