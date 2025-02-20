@@ -4,6 +4,7 @@ import { generatePKCE } from "@/lib/pkce";
 import { useEffect, useState } from "react";
 import Subscriptions from "@/components/subscriptions";
 import SubscribeEvents from "@/components/subscribe-events";
+import ChatMessages from "@/components/chat-messages";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID as string;
 const REDIRECT_URI = process.env.NEXT_PUBLIC_REDIRECT_URI as string;
@@ -80,7 +81,7 @@ export default function Home() {
   }
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="p-6">
 
       {accessToken ? (
         <div>
@@ -90,6 +91,8 @@ export default function Home() {
           <Subscriptions />
 
           <SubscribeEvents />
+
+          <ChatMessages />
         </div>
       ) : (
         <div>
