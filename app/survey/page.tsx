@@ -16,6 +16,7 @@ export default function SurveyPage() {
   const [currentQuestion, setCurrentQuestion] = useState("");
   const [currentOptions, setCurrentOptions] = useState<string[]>([]);
   const [winner, setWinner] = useState<{ option: string; count: number } | null>(null);
+  const [intervalTime] = useState(5000);
 
   // Polling for live vote counts when survey is active
   useEffect(() => {
@@ -28,12 +29,12 @@ export default function SurveyPage() {
     }
     if (votingActive) {
       fetchVotes();
-      interval = setInterval(fetchVotes, 2000);
+      interval = setInterval(fetchVotes, intervalTime);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [votingActive]);
+  }, [votingActive, intervalTime]);
 
   const handleStartSurvey = async () => {
     const accessToken = sessionStorage.getItem('access_token');
@@ -148,6 +149,9 @@ export default function SurveyPage() {
               ➕ Add Option
             </button>
           </div>
+
+
+
           <button
             onClick={handleStartSurvey}
             className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white font-semibold"
