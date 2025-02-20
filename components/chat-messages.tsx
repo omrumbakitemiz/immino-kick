@@ -31,6 +31,7 @@ export default function WebhookDataPage() {
     async function fetchWebhookData() {
       const res = await fetch("/api/webhook");
       const data = await res.json();
+      console.log(data);
       setMessages(data.data);
     }
 
