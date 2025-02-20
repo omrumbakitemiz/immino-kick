@@ -14,7 +14,15 @@ interface WebhookMessage {
     profile_picture: string;
   };
   content: string;
+  timestamp?: string; // Timestamp added
 }
+
+// Function to format timestamp
+const formatTimestamp = (timestamp?: string) => {
+  if (!timestamp) return "Unknown time";
+  const date = new Date(timestamp);
+  return date.toLocaleString(); // Convert to readable format
+};
 
 export default function WebhookDataPage() {
   const [messages, setMessages] = useState<WebhookMessage[]>([]);
@@ -51,6 +59,7 @@ export default function WebhookDataPage() {
                 <div>
                   <p className="font-bold">{msg.sender.username}</p>
                   <p className="text-gray-300">{msg.content}</p>
+                  <p className="text-gray-500 text-sm">{formatTimestamp(msg.timestamp)}</p>
                 </div>
               </li>
             ))}
