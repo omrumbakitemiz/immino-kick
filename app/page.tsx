@@ -1,12 +1,61 @@
 "use client";
 
 import { generatePKCE } from "@/lib/pkce";
+import { useEffect, useState } from "react";
+import Subscriptions from "@/components/subscriptions";
+import SubscribeEvents from "@/components/subscribe-events";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID as string;
 const REDIRECT_URI = process.env.NEXT_PUBLIC_REDIRECT_URI as string;
 const AUTH_ENDPOINT = process.env.NEXT_PUBLIC_AUTH_ENDPOINT as string;
 
 export default function Home() {
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load tokens from sessionStorage (or a secure storage)
+    const storedAccessToken = sessionStorage.getItem("access_token");
+    const storedRefreshToken = sessionStorage.getItem("refresh_token");
+
+    setAccessToken(storedAccessToken);
+    setRefreshToken(storedRefreshToken);
+
+    if (storedAccessToken && storedRefreshToken) {
+      // Schedule token refresh 5 minutes before expiration
+      const refreshInterval = setInterval(() => {
+        refreshAccessToken();
+      }, (7200 - 300) * 1000); // 1 hour 55 minutes
+
+      return () => clearInterval(refreshInterval); // Cleanup on unmount
+    }
+  }, []);
+
+  async function refreshAccessToken() {
+    if (!refreshToken) return;
+
+    try {
+      const response = await fetch("/api/refresh-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      const data = await response.json();
+
+      if (data.access_token) {
+        setAccessToken(data.access_token);
+        sessionStorage.setItem("access_token", data.access_token);
+        sessionStorage.setItem("refresh_token", data.refresh_token); // Update refresh token if provided
+      } else {
+        console.error("Failed to refresh token:", data.error);
+      }
+    } catch (error) {
+      console.error("Error refreshing token:", error);
+    }
+  }
+
+
   const handleClick = async () => {
     const { codeVerifier, codeChallenge } = await generatePKCE();
 
@@ -32,7 +81,26 @@ export default function Home() {
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <input type="button" value="Authorize" onClick={handleClick} />
+
+      {accessToken ? (
+        <div>
+          <p>Authenticated ✅</p>
+          <p>Access Token: {accessToken}</p>
+
+          <Subscriptions />
+
+          <SubscribeEvents />
+        </div>
+      ) : (
+        <div>
+          <p>Not authenticated ❌</p>
+        </div>
+      )}
+
+      {!accessToken && (
+        <input type="button" value="Authenticate" onClick={handleClick} />
+      )}
+
     </div>
   );
 }
