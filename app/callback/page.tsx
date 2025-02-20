@@ -61,15 +61,12 @@ export default function CallbackPage() {
     <div className="flex flex-col gap-y-6 p-4 items-center">
       <p>{message}</p>
 
-      {/* back to home page*/}
       <Link
         href="/"
         className="w-fit px-6 py-3 bg-amber-500 hover:bg-amber-500 rounded-md text-white font-semibold transition duration-300"
       >
         Return to Home
       </Link>
-
-      {/*refresh token*/}
     </div>
   );
 }
