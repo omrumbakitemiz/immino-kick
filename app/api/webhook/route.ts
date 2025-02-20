@@ -4,10 +4,17 @@ const webhookData: any[] = []; // Temporary in-memory storage
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    console.log("Webhook received:", body);
+    const headers = req.headers;
+    const eventType = headers.get("Kick-Event-Type");
 
-    webhookData.push(body); // Store data in memory
+    if (eventType !== "chat.message.sent") {
+      return NextResponse.json({ message: "Ignored non-chat event" }, { status: 200 });
+    }
+
+    const body = await req.json();
+    console.log("Kick Chat Message Received:", body);
+
+    webhookData.unshift(body); // Store new messages at the top
 
     return NextResponse.json({ message: "Webhook received" }, { status: 200 });
   } catch (error) {
