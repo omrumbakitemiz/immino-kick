@@ -1,29 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { surveyState } from "../survey/state";
 
-let votes: Record<string, number> = {}; // Store vote counts
-let votingActive = true; // Controls voting state
-const webhookData: any[] = []; // Store raw messages for debugging
+const webhookData: any[] = [];
 
 export async function POST(req: NextRequest) {
   try {
     const headers = req.headers;
     const eventType = headers.get("Kick-Event-Type");
-    const body = await req.json();
-
+    if (!eventType) {
+      return NextResponse.json({ message: "Missing Kick-Event-Type header" }, { status: 400 });
+    }
     if (eventType !== "chat.message.sent") {
       return NextResponse.json({ message: "Ignored non-chat event" }, { status: 200 });
     }
-
-    const messageContent = body.content.trim(); // Get chat message
+    const body = await req.json();
+    const messageContent = body.content.trim();
     console.log("📩 Received Vote:", messageContent);
-
-    // Only process votes if voting is active
-    if (votingActive && /^[1-9]\d*$/.test(messageContent)) {
-      votes[messageContent] = (votes[messageContent] || 0) + 1;
+    // Process vote if voting is active and message is a valid positive integer
+    if (surveyState.votingActive && /^[1-9]\d*$/.test(messageContent)) {
+      surveyState.votes[messageContent] = (surveyState.votes[messageContent] || 0) + 1;
     }
-
-    webhookData.unshift(body); // Store raw messages
-
+    webhookData.unshift(body);
     return NextResponse.json({ message: "Vote received" }, { status: 200 });
   } catch (error) {
     console.error("❌ Error handling webhook:", error);
@@ -31,36 +28,35 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// API to fetch vote counts
+// GET: Return current vote counts and status
 export async function GET() {
-  return NextResponse.json({ votes, votingActive });
+  return NextResponse.json({
+    votes: surveyState.votes,
+    votingActive: surveyState.votingActive,
+  });
 }
 
-// API to reset votes and start a new survey
-export async function DELETE() {
-  votes = {}; // Reset votes
-  votingActive = true;
-  return NextResponse.json({ message: "Voting reset" });
-}
-
-// API to stop voting and determine winner
+// PUT: End voting and determine the winner
 export async function PUT() {
-  votingActive = false;
-
+  surveyState.votingActive = false;
   let winnerOption: string | null = null;
   let maxVotes = 0;
-
-  // Iterate through votes to find the option with the highest count
-  for (const [option, count] of Object.entries(votes)) {
+  for (const [option, count] of Object.entries(surveyState.votes)) {
     if (count > maxVotes) {
       maxVotes = count;
       winnerOption = option;
     }
   }
-
   return NextResponse.json({
     message: "Voting ended",
     winner: winnerOption ? { option: winnerOption, count: maxVotes } : null,
-    votes,
+    votes: surveyState.votes,
   });
+}
+
+// DELETE: Reset the survey (manual reset)
+export async function DELETE() {
+  surveyState.votes = {};
+  surveyState.votingActive = true;
+  return NextResponse.json({ message: "Voting reset" });
 }

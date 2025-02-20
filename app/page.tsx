@@ -16,6 +16,30 @@ export default function Home() {
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
 
   useEffect(() => {
+    async function refreshAccessToken() {
+      if (!refreshToken) return;
+
+      try {
+        const response = await fetch("/api/refresh-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+
+        const data = await response.json();
+
+        if (data.access_token) {
+          setAccessToken(data.access_token);
+          sessionStorage.setItem("access_token", data.access_token);
+          sessionStorage.setItem("refresh_token", data.refresh_token); // Update refresh token if provided
+        } else {
+          console.error("Failed to refresh token:", data.error);
+        }
+      } catch (error) {
+        console.error("Error refreshing token:", error);
+      }
+    }
+
     // Load tokens from sessionStorage (or a secure storage)
     const storedAccessToken = sessionStorage.getItem("access_token");
     const storedRefreshToken = sessionStorage.getItem("refresh_token");
@@ -31,31 +55,7 @@ export default function Home() {
 
       return () => clearInterval(refreshInterval); // Cleanup on unmount
     }
-  }, []);
-
-  async function refreshAccessToken() {
-    if (!refreshToken) return;
-
-    try {
-      const response = await fetch("/api/refresh-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      });
-
-      const data = await response.json();
-
-      if (data.access_token) {
-        setAccessToken(data.access_token);
-        sessionStorage.setItem("access_token", data.access_token);
-        sessionStorage.setItem("refresh_token", data.refresh_token); // Update refresh token if provided
-      } else {
-        console.error("Failed to refresh token:", data.error);
-      }
-    } catch (error) {
-      console.error("Error refreshing token:", error);
-    }
-  }
+  }, [refreshToken]);
 
 
   const handleClick = async () => {
@@ -65,15 +65,14 @@ export default function Home() {
     sessionStorage.setItem("code_verifier", codeVerifier);
     console.log("codeVerifier", codeVerifier);
 
-    // OAuth Authorization URL
-
-    const scope = "events:subscribe";
+    const scopes = ["events:subscribe", "chat:write"];
+    const scopeString = scopes.join(" "); // "events:subscribe chat:write"
 
     const url = new URL(AUTH_ENDPOINT);
     url.searchParams.set("client_id", CLIENT_ID);
     url.searchParams.set("redirect_uri", REDIRECT_URI);
     url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", scope);
+    url.searchParams.set("scope", scopeString);
     url.searchParams.set("state", "123456");
     url.searchParams.set("code_challenge_method", "S256");
     url.searchParams.set("code_challenge", codeChallenge);
