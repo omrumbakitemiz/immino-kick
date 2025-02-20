@@ -103,7 +103,12 @@ export default function Home() {
       )}
 
       {!accessToken && (
-        <input type="button" value="Authenticate" onClick={handleClick} />
+        <button
+          onClick={handleClick}
+          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-500 text-white font-semibold rounded-md shadow transition duration-300"
+        >
+          Authenticate
+        </button>
       )}
 
     </div>

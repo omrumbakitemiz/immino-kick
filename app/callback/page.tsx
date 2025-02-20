@@ -63,7 +63,7 @@ export default function CallbackPage() {
       <p>{message}</p>
 
       {/* back to home page*/}
-      <Link href="/">Back to Home</Link>
+      <Link href="/">Return to Home</Link>
 
       {/*refresh token*/}
     </div>
