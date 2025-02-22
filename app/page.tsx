@@ -112,14 +112,14 @@ export default function Home() {
             <p onClick={handleAuthenticatedClick} className="cursor-pointer select-none">Authenticated ✅</p>
           </div>
 
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
             <div className="col-span-3">
               <SurveyPage />
             </div>
 
-            <div className="col-span-1">
-              <ChatMessages />
-            </div>
+            {/*<div className="col-span-1">*/}
+            {/*  <ChatMessages />*/}
+            {/*</div>*/}
           </div>
         </div>
       ) : (

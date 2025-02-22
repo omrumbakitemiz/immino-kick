@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
     console.log("📩 Received Vote:", messageContent);
     // Process vote if voting is active and message is a valid positive integer
     if (surveyState.votingActive && /^[1-9]\d*$/.test(messageContent)) {
-      surveyState.votes[messageContent] = (surveyState.votes[messageContent] || 0) + 1;
+      const senderId = body.sender.user_id.toString();
+      surveyState.userVotes[senderId] = messageContent;
     }
     webhookData.unshift(body);
     return NextResponse.json({ message: "Vote received" }, { status: 200 });
@@ -31,32 +32,41 @@ export async function POST(req: NextRequest) {
 // GET: Return current vote counts and status
 export async function GET() {
   return NextResponse.json({
-    votes: surveyState.votes,
+    userVotes: surveyState.userVotes,
     votingActive: surveyState.votingActive,
   });
 }
 
-// PUT: End voting and determine the winner
+// PUT: End voting and determine the winner (counting each user's last vote only)
 export async function PUT() {
   surveyState.votingActive = false;
+
+  // Tally votes by iterating over userVotes (user_id -> vote option)
+  const voteCounts: Record<string, number> = {};
+  for (const vote of Object.values(surveyState.userVotes || {})) {
+    voteCounts[vote] = (voteCounts[vote] || 0) + 1;
+  }
+
+  // Determine the winning option
   let winnerOption: string | null = null;
   let maxVotes = 0;
-  for (const [option, count] of Object.entries(surveyState.votes)) {
+  for (const [option, count] of Object.entries(voteCounts)) {
     if (count > maxVotes) {
       maxVotes = count;
       winnerOption = option;
     }
   }
+
   return NextResponse.json({
     message: "Voting ended",
     winner: winnerOption ? { option: winnerOption, count: maxVotes } : null,
-    votes: surveyState.votes,
+    votes: voteCounts,
   });
 }
 
 // DELETE: Reset the survey (manual reset)
 export async function DELETE() {
-  surveyState.votes = {};
+  surveyState.userVotes = {};
   surveyState.votingActive = true;
   return NextResponse.json({ message: "Voting reset" });
 }

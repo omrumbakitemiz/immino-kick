@@ -24,7 +24,7 @@ export default function SurveyPage() {
     async function fetchVotes() {
       const res = await fetch("/api/webhook");
       const data = await res.json();
-      setVotes(data.votes);
+      setVotes(data.userVotes);
       setVotingActive(data.votingActive);
     }
     if (votingActive) {
@@ -65,6 +65,7 @@ export default function SurveyPage() {
   };
 
   const handleEndSurvey = async () => {
+    console.log('handleEndSurvey');
     const res = await fetch("/api/webhook", { method: "PUT" });
     const data = await res.json();
     if (res.ok) {
@@ -76,6 +77,7 @@ export default function SurveyPage() {
   };
 
   const handleResetSurvey = async () => {
+    console.log('handleResetSurvey');
     const res = await fetch("/api/webhook", { method: "DELETE" });
     if (res.ok) {
       setVotes({});
@@ -107,6 +109,8 @@ export default function SurveyPage() {
   return (
     <div className="p-6 bg-black min-h-screen text-white flex flex-col items-center space-y-6 rounded-md">
       <h1 className="text-3xl font-bold">Kick Chat Survey</h1>
+
+      votingActive: {votingActive ? "true" : "false"}
 
       {/* Survey Creation Form */}
       {!votingActive && !winner && (

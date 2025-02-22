@@ -1,12 +1,12 @@
 export const surveyState = {
-  votes: {} as Record<string, number>,
+  userVotes: {} as Record<string, string>, // user_id -> vote option
   votingActive: false,
   currentQuestion: "",
   voteOptions: [] as string[],
 };
 
 export function resetSurvey() {
-  surveyState.votes = {};
+  surveyState.userVotes = {};
   surveyState.votingActive = false;
   surveyState.currentQuestion = "";
   surveyState.voteOptions = [];

@@ -21,6 +21,8 @@ export async function POST(req: NextRequest) {
     surveyState.currentQuestion = body.question;
     surveyState.voteOptions.splice(0, surveyState.voteOptions.length, ...body.options);
     surveyState.votingActive = true;
+    console.log("📊 Survey started:", surveyState.currentQuestion, surveyState.voteOptions);
+    console.log("📊 Voting active:", surveyState.votingActive);
 
     // Construct the chat message to announce the survey
     const chatMessage = `📢 New Survey: ${surveyState.currentQuestion}\nVote with: ${surveyState.voteOptions.join(", ")}`;
@@ -47,6 +49,7 @@ export async function POST(req: NextRequest) {
       message: "Survey started",
       question: surveyState.currentQuestion,
       options: surveyState.voteOptions,
+      votingActive: surveyState.votingActive,
     });
   } catch (error) {
     console.error("❌ Error starting survey:", error);
