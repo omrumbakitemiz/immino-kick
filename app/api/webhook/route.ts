@@ -31,8 +31,16 @@ export async function POST(req: NextRequest) {
 
 // GET: Return current vote counts and status
 export async function GET() {
+  // when returning the webhook data, we want to do some calculations on surveyState.userVotes
+  // we want to count the number of votes for each option, but count should be based on senderId
+  const votes: Record<string, number> = {};
+
+  for (const vote of Object.values(surveyState.userVotes || {})) {
+    votes[vote] = (votes[vote] || 0) + 1;
+  }
+
   return NextResponse.json({
-    userVotes: surveyState.userVotes,
+    votes,
     votingActive: surveyState.votingActive,
   });
 }

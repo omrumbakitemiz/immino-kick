@@ -24,7 +24,7 @@ export default function SurveyPage() {
     async function fetchVotes() {
       const res = await fetch("/api/webhook");
       const data = await res.json();
-      setVotes(data.userVotes);
+      setVotes(data.votes);
       setVotingActive(data.votingActive);
     }
     if (votingActive) {
