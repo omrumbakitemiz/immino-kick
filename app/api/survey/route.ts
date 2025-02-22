@@ -27,14 +27,14 @@ export async function POST(req: NextRequest) {
     console.log("📊 Voting active: true");
 
     // Construct the chat message to announce the survey
-    const chatMessage = `📢 New Survey: ${body.question}\nVote with: ${body.options.join(", ")}`;
+    const chatMessage = `📢 New Poll: ${body.question}\nVote with: ${body.options.join(", ")}`;
     console.log("token:", token);
 
     // Send the chat message to Kick
     const response = await fetch(NEXT_PUBLIC_API_URL + "/public/v1/chat", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
