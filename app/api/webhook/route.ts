@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { surveyState } from "../survey/state";
+import { getRedisClient } from "@/lib/redis";
 
 const webhookData: any[] = [];
 
+// POST: Process incoming Kick chat vote
 export async function POST(req: NextRequest) {
   try {
     const headers = req.headers;
-    const eventType = headers.get("Kick-Event-Type");
+  const eventType = headers.get("Kick-Event-Type");
     if (!eventType) {
       return NextResponse.json({ message: "Missing Kick-Event-Type header" }, { status: 400 });
     }
@@ -16,11 +17,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const messageContent = body.content.trim();
     console.log("📩 Received Vote:", messageContent);
-    // Process vote if voting is active and message is a valid positive integer
-    if (surveyState.votingActive && /^[1-9]\d*$/.test(messageContent)) {
-      const senderId = body.sender.user_id.toString();
-      surveyState.userVotes[senderId] = messageContent;
+
+    const client = await getRedisClient();
+
+    // Check if voting is active by reading the key "survey:votingActive"
+    const votingActive = await client.get("survey:votingActive");
+    if (votingActive !== "true") {
+      return NextResponse.json({ message: "Voting is not active" }, { status: 200 });
     }
+
+    // Process vote if message is a valid positive integer
+    if (/^[1-9]\d*$/.test(messageContent)) {
+      const senderId = body.sender.user_id.toString();
+      // Store/update the user's vote in the Redis hash "survey:userVotes"
+      await client.hSet("survey:userVotes", senderId, messageContent);
+    }
+
     webhookData.unshift(body);
     return NextResponse.json({ message: "Vote received" }, { status: 200 });
   } catch (error) {
@@ -29,52 +41,62 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET: Return current vote counts and status
+// GET: Return current vote counts and voting status
 export async function GET() {
-  // when returning the webhook data, we want to do some calculations on surveyState.userVotes
-  // we want to count the number of votes for each option, but count should be based on senderId
-  const votes: Record<string, number> = {};
+  try {
+    const client = await getRedisClient();
+    const votingActive = await client.get("survey:votingActive");
+    // Retrieve all user votes from the Redis hash
+    const userVotes = await client.hGetAll("survey:userVotes");
+    const votes: Record<string, number> = {};
 
-  for (const vote of Object.values(surveyState.userVotes || {})) {
-    votes[vote] = (votes[vote] || 0) + 1;
+    // Tally votes: each user's last vote is counted only once
+    Object.values(userVotes).forEach((vote) => {
+      votes[vote] = (votes[vote] || 0) + 1;
+    });
+
+    return NextResponse.json({
+      votes,
+      votingActive: votingActive === "true",
+    });
+  } catch (error) {
+    console.error("❌ Error fetching votes:", error);
+    return NextResponse.json({ error: "Failed to fetch votes" }, { status: 500 });
   }
-
-  return NextResponse.json({
-    votes,
-    votingActive: surveyState.votingActive,
-  });
 }
 
-// PUT: End voting and determine the winner (counting each user's last vote only)
+// PUT: End voting and determine the winner (each user's last vote only)
 export async function PUT() {
-  surveyState.votingActive = false;
+  try {
+    const client = await getRedisClient();
+    // End voting by setting the flag to "false"
+    await client.set("survey:votingActive", "false");
 
-  // Tally votes by iterating over userVotes (user_id -> vote option)
-  const voteCounts: Record<string, number> = {};
-  for (const vote of Object.values(surveyState.userVotes || {})) {
-    voteCounts[vote] = (voteCounts[vote] || 0) + 1;
-  }
+    const userVotes = await client.hGetAll("survey:userVotes");
+    const voteCounts: Record<string, number> = {};
 
-  // Determine the winning option
-  let winnerOption: string | null = null;
-  let maxVotes = 0;
-  for (const [option, count] of Object.entries(voteCounts)) {
-    if (count > maxVotes) {
-      maxVotes = count;
-      winnerOption = option;
+    Object.values(userVotes).forEach((vote) => {
+      voteCounts[vote] = (voteCounts[vote] || 0) + 1;
+    });
+
+    // Determine the winning option
+    let winnerOption: string | null = null;
+    let maxVotes = 0;
+    for (const [option, count] of Object.entries(voteCounts)) {
+      if (count > maxVotes) {
+        maxVotes = count;
+        winnerOption = option;
+      }
     }
+
+    return NextResponse.json({
+      message: "Voting ended",
+      winner: winnerOption ? { option: winnerOption, count: maxVotes } : null,
+      votes: voteCounts,
+    });
+  } catch (error) {
+    console.error("❌ Error ending survey:", error);
+    return NextResponse.json({ error: "Failed to end survey" }, { status: 500 });
   }
-
-  return NextResponse.json({
-    message: "Voting ended",
-    winner: winnerOption ? { option: winnerOption, count: maxVotes } : null,
-    votes: voteCounts,
-  });
 }
 
-// DELETE: Reset the survey (manual reset)
-export async function DELETE() {
-  surveyState.userVotes = {};
-  surveyState.votingActive = true;
-  return NextResponse.json({ message: "Voting reset" });
-}

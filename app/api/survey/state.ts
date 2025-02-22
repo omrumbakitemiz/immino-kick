@@ -5,11 +5,3 @@ export const surveyState = {
   currentQuestion: "",
   voteOptions: [] as string[],
 };
-
-export function resetSurvey() {
-  surveyState.userVotes = {};
-  surveyState.votes = {};
-  surveyState.votingActive = false;
-  surveyState.currentQuestion = "";
-  surveyState.voteOptions = [];
-}

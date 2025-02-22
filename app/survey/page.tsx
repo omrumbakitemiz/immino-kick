@@ -76,22 +76,6 @@ export default function SurveyPage() {
     }
   };
 
-  const handleResetSurvey = async () => {
-    console.log('handleResetSurvey');
-    const res = await fetch("/api/webhook", { method: "DELETE" });
-    if (res.ok) {
-      setVotes({});
-      setWinner(null);
-      setVotingActive(false);
-      setCurrentQuestion("");
-      setCurrentOptions([]);
-      setQuestion("");
-      setOptions(["", ""]);
-    } else {
-      alert("Failed to reset survey.");
-    }
-  };
-
   const handleAddOption = () => {
     setOptions([...options, ""]);
   };
@@ -191,12 +175,6 @@ export default function SurveyPage() {
               className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded font-semibold"
             >
               End Survey
-            </button>
-            <button
-              onClick={handleResetSurvey}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-semibold"
-            >
-              Reset Survey
             </button>
           </div>
         </div>
