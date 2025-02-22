@@ -3,7 +3,7 @@
 import { generatePKCE } from "@/lib/pkce";
 import { useEffect, useRef, useState } from "react";
 import SurveyPage from "@/app/survey/page";
-import ChatMessages from "@/components/chat-messages";
+// import ChatMessages from "@/components/chat-messages";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID as string;
 const REDIRECT_URI = process.env.NEXT_PUBLIC_REDIRECT_URI as string;
