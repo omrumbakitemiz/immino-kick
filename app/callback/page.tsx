@@ -1,14 +1,14 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
 export default function CallbackPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
   const state = searchParams.get("state");
-  const [message, setMessage] = useState("Processing...");
+  const [message, setMessage] = useState("Processing your login...");
 
   // Remove query parameters from the URL for better security
   useEffect(() => {
@@ -18,21 +18,9 @@ export default function CallbackPage() {
   }, []);
 
   useEffect(() => {
-    if (!code) {
-      setMessage("No authorization code found.");
-      return;
-    }
-
-    // Retrieve `code_verifier` from session storage
-    const codeVerifier = sessionStorage.getItem("code_verifier");
-
-    if (!codeVerifier) {
-      setMessage("Missing code_verifier.");
-      return;
-    }
-
-    async function fetchToken() {
+    async function handleAuth() {
       try {
+        const codeVerifier = sessionStorage.getItem("code_verifier");
         const response = await fetch("/api/token", {
           method: "POST",
           headers: {
@@ -48,32 +36,35 @@ export default function CallbackPage() {
         const data = await response.json();
 
         if (data.access_token) {
-          setMessage("Authentication successfully completed! 🤙");
           sessionStorage.setItem("access_token", data.access_token);
           sessionStorage.setItem("refresh_token", data.refresh_token);
           sessionStorage.setItem("expires_in", data.expires_in);
+          setMessage("Login successful! Redirecting...");
+          setTimeout(() => {
+            router.push('/');
+          }, 1500);
         } else {
-          setMessage(`Error: ${data.error || "Unknown error"}`);
+          setTimeout(() => {
+            router.push('/');
+          }, 2000);
         }
       } catch (error) {
         console.error(error);
-        setMessage("Failed to exchange code for token.");
+        setTimeout(() => {
+          router.push('/');
+        }, 2000);
       }
     }
 
-    fetchToken();
-  }, [code, state]);
+    handleAuth();
+  }, [code, state, router]);
 
   return (
-    <div className="flex flex-col gap-y-6 p-4 items-center">
-      <p>{message}</p>
-
-      <Link
-        href="/"
-        className="w-fit px-6 py-3 bg-amber-500 hover:bg-amber-500 rounded-md text-white font-semibold transition duration-300"
-      >
-        Return to Home
-      </Link>
+    <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="flex flex-col items-center gap-y-6">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-800 border-t-emerald-500" />
+        <p className="text-lg text-gray-300 font-medium">{message}</p>
+      </div>
     </div>
   );
 }

@@ -32,15 +32,23 @@ export default function Subscriptions() {
   }, [storedAccessToken]);
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return (
+      <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+        Error: {error}
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1>Event Subscriptions</h1>
-      <ul>
-        {JSON.stringify(subscriptions)}
-      </ul>
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent">
+        Event Subscriptions
+      </h1>
+      <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+        <pre className="text-gray-300 overflow-x-auto">
+          {JSON.stringify(subscriptions, null, 2)}
+        </pre>
+      </div>
     </div>
   );
 }
