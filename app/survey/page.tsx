@@ -109,6 +109,31 @@ export default function SurveyPage() {
         setTotalVotes(data.totalVotes);
         setVotingActive(false);
         setShowFireworks(true);
+        
+        // Send poll results to chat
+        const accessToken = sessionStorage.getItem('access_token');
+        const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL;
+        
+        // Construct a friendly Turkish results message
+        const resultsMessage = `"${data.winner?.option}" - ${data.winner?.percentage}% oy ile kazandı! 🎉 - Anketi ${data.totalVotes} kişi oyladı!`;
+
+        // Send the chat message to Kick
+        const chatResponse = await fetch(NEXT_PUBLIC_API_URL + '/public/v1/chat', {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            content: resultsMessage,
+            type: "bot",
+          }),
+        });
+
+        if (!chatResponse.ok) {
+          console.error("Failed to send results to chat:", await chatResponse.text());
+        }
+
         // Reset fireworks after 3 seconds
         setTimeout(() => {
           setShowFireworks(false);
