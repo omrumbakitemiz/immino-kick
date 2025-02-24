@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Fireworks from "../components/Fireworks";
 
 interface VoteCounts {
   [key: string]: number;
@@ -27,6 +28,7 @@ export default function SurveyPage() {
   const [voteDetails, setVoteDetails] = useState<VoteDetail[]>([]);
   const [totalVotes, setTotalVotes] = useState(0);
   const [intervalTime] = useState(5000);
+  const [showFireworks, setShowFireworks] = useState(false);
 
   // Polling for live vote counts when survey is active
   useEffect(() => {
@@ -106,6 +108,11 @@ export default function SurveyPage() {
         setVoteDetails(data.voteDetails);
         setTotalVotes(data.totalVotes);
         setVotingActive(false);
+        setShowFireworks(true);
+        // Reset fireworks after 3 seconds
+        setTimeout(() => {
+          setShowFireworks(false);
+        }, 3000);
       } else {
         alert("Failed to end survey.");
       }
@@ -160,6 +167,7 @@ export default function SurveyPage() {
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-gray-900 min-h-screen text-gray-100 flex flex-col space-y-6 rounded-md relative">
+      <Fireworks isActive={showFireworks} />
       {isLoading && (
         <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-800 border-t-emerald-500" />
