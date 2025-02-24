@@ -55,20 +55,41 @@ export async function PUT() {
     voteCounts[vote] = (voteCounts[vote] || 0) + 1;
   }
 
+  // Calculate total votes
+  let totalVotes = 0;
+  for (const count of Object.values(voteCounts)) {
+    totalVotes += count;
+  }
+
+  // Calculate percentages and create vote details
+  const voteDetails = Object.entries(voteCounts).map(([option, count]) => ({
+    option,
+    count,
+    percentage: totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0
+  }));
+
   // Determine the winning option
   let winnerOption: string | null = null;
   let maxVotes = 0;
-  for (const [option, count] of Object.entries(voteCounts)) {
+  for (const {option, count} of voteDetails) {
     if (count > maxVotes) {
       maxVotes = count;
       winnerOption = option;
     }
   }
 
+  const winner = winnerOption ? {
+    option: winnerOption,
+    count: maxVotes,
+    percentage: Math.round((maxVotes / totalVotes) * 100)
+  } : null;
+
   return NextResponse.json({
     message: "Voting ended",
-    winner: winnerOption ? { option: winnerOption, count: maxVotes } : null,
+    winner,
     votes: voteCounts,
+    voteDetails,
+    totalVotes
   });
 }
 

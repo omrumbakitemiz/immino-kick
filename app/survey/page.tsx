@@ -6,6 +6,12 @@ interface VoteCounts {
   [key: string]: number;
 }
 
+interface VoteDetail {
+  option: string;
+  count: number;
+  percentage: number;
+}
+
 export default function SurveyPage() {
   // Survey creation states
   const [question, setQuestion] = useState("");
@@ -15,7 +21,9 @@ export default function SurveyPage() {
   const [votingActive, setVotingActive] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState("");
   const [currentOptions, setCurrentOptions] = useState<string[]>([]);
-  const [winner, setWinner] = useState<{ option: string; count: number } | null>(null);
+  const [winner, setWinner] = useState<{ option: string; count: number; percentage: number } | null>(null);
+  const [voteDetails, setVoteDetails] = useState<VoteDetail[]>([]);
+  const [totalVotes, setTotalVotes] = useState(0);
   const [intervalTime] = useState(5000);
 
   // Polling for live vote counts when survey is active
@@ -70,6 +78,8 @@ export default function SurveyPage() {
     const data = await res.json();
     if (res.ok) {
       setWinner(data.winner);
+      setVoteDetails(data.voteDetails);
+      setTotalVotes(data.totalVotes);
       setVotingActive(false);
     } else {
       alert("Failed to end survey.");
@@ -204,8 +214,31 @@ export default function SurveyPage() {
 
       {/* Winner Announcement */}
       {winner && (
-        <div className="w-96 p-4 bg-green-700 rounded text-black font-bold text-center">
-          🎉 Winner: Option {winner.option} with {winner.count} votes!
+        <div className="w-96 space-y-4">
+          <div className="p-4 bg-green-700 rounded text-white font-bold text-center">
+            🎉 Winner: Option {winner.option} with {winner.count} votes ({winner.percentage}%)!
+          </div>
+          
+          <div className="p-4 bg-gray-900 border border-gray-700 rounded">
+            <h3 className="font-semibold mb-3">Final Results:</h3>
+            <div className="space-y-2">
+              {voteDetails.map((detail) => (
+                <div key={detail.option} className="relative">
+                  <div className="flex justify-between p-2 bg-gray-800 rounded">
+                    <span>Option {detail.option}</span>
+                    <span className="text-green-400">
+                      {detail.count} votes ({detail.percentage}%)
+                    </span>
+                  </div>
+                  <div 
+                    className="absolute top-0 left-0 h-full bg-green-800 opacity-25 rounded"
+                    style={{ width: `${detail.percentage}%` }}
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-gray-400">Total votes: {totalVotes}</p>
+          </div>
         </div>
       )}
     </div>
