@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { surveyState } from "../survey/state";
+import { surveyState, logStateInfo } from "../survey/state";
 
 const webhookData: any[] = [];
 
 export async function POST(req: NextRequest) {
   console.log("🔵 Webhook POST received");
+  logStateInfo("WEBHOOK_POST_START");
 
   try {
     const headers = req.headers;
@@ -57,9 +58,11 @@ export async function POST(req: NextRequest) {
       console.log(`✅ Processing vote: ${messageContent} from ${senderUsername} (${senderId})`);
       surveyState.userVotes[senderId] = messageContent;
       console.log("📈 Updated user votes:", surveyState.userVotes);
+      logStateInfo("WEBHOOK_POST_AFTER_VOTE");
     } else {
       if (!surveyState.votingActive) {
         console.log("⏸️ Vote ignored - voting not active");
+        logStateInfo("WEBHOOK_POST_VOTING_INACTIVE");
       } else if (!/^[1-9]\d*$/.test(messageContent)) {
         console.log(`🚫 Invalid vote format: "${messageContent}" - must be positive integer`);
       }
@@ -78,6 +81,7 @@ export async function POST(req: NextRequest) {
 // GET: Return current vote counts and status
 export async function GET() {
   console.log("🔵 Webhook GET received - fetching vote counts");
+  logStateInfo("WEBHOOK_GET_START");
 
   // when returning the webhook data, we want to do some calculations on surveyState.userVotes
   // we want to count the number of votes for each option, but count should be based on senderId
@@ -104,6 +108,7 @@ export async function GET() {
 // PUT: End voting and determine the winner (counting each user's last vote only)
 export async function PUT() {
   console.log("🔵 Webhook PUT received - ending survey");
+  logStateInfo("WEBHOOK_PUT_START");
 
   surveyState.votingActive = false;
   console.log("⏹️ Voting deactivated");
@@ -163,6 +168,7 @@ export async function PUT() {
 // DELETE: Reset the survey (manual reset)
 export async function DELETE() {
   console.log("🔵 Webhook DELETE received - resetting survey");
+  logStateInfo("WEBHOOK_DELETE_START");
 
   surveyState.userVotes = {};
   surveyState.votingActive = true;

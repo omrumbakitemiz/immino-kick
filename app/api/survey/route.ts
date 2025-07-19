@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { surveyState, resetSurvey } from "./state";
+import { surveyState, resetSurvey, logStateInfo } from "./state";
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("🔵 Survey POST received - starting new poll");
+    logStateInfo("SURVEY_POST_START");
+
     const token = req.headers.get("Authorization");
 
     if (!token) {
@@ -24,6 +27,7 @@ export async function POST(req: NextRequest) {
 
     console.log("📊 Survey started:", surveyState.currentQuestion, surveyState.voteOptions);
     console.log("📊 Voting active:", surveyState.votingActive);
+    logStateInfo("SURVEY_POST_AFTER_START");
 
     // Note: App Access Tokens cannot send chat messages
     // Poll will work via webhook - users vote by typing numbers in chat
