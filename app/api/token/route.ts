@@ -5,7 +5,7 @@ const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID as string;
 const CLIENT_SECRET = process.env.CLIENT_SECRET as string;
 
 // App Access Token endpoint - uses client credentials grant
-export async function POST(req: Request) {
+export async function POST() {
   try {
     // For App Access Token, we use client_credentials grant type
     const body = new URLSearchParams({
