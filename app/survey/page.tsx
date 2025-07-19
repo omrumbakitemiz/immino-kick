@@ -18,7 +18,7 @@ export default function SurveyPage() {
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Live survey states
   const [votes, setVotes] = useState<VoteCounts>({});
   const [votingActive, setVotingActive] = useState(false);
@@ -43,7 +43,7 @@ export default function SurveyPage() {
         console.error("Error fetching votes:", error);
       }
     }
-    
+
     if (votingActive) {
       fetchVotes();
       interval = setInterval(fetchVotes, intervalTime);
@@ -75,9 +75,9 @@ export default function SurveyPage() {
           "Content-Type": "application/json",
           "Authorization": "Bearer " + accessToken,
         },
-        body: JSON.stringify({ 
-          question, 
-          options: validOptions 
+        body: JSON.stringify({
+          question,
+          options: validOptions
         }),
       });
       const data = await res.json();
@@ -109,30 +109,10 @@ export default function SurveyPage() {
         setTotalVotes(data.totalVotes);
         setVotingActive(false);
         setShowFireworks(true);
-        
-        // Send poll results to chat
-        const accessToken = sessionStorage.getItem('access_token');
-        const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL;
-        
-        // Construct a friendly Turkish results message
-        const resultsMessage = `"${data.winner?.option}" - ${data.winner?.percentage}% oy ile kazandı! 🎉 - Anketi ${data.totalVotes} kişi oyladı!`;
 
-        // Send the chat message to Kick
-        const chatResponse = await fetch(NEXT_PUBLIC_API_URL + '/public/v1/chat', {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            content: resultsMessage,
-            type: "bot",
-          }),
-        });
-
-        if (!chatResponse.ok) {
-          console.error("Failed to send results to chat:", await chatResponse.text());
-        }
+        // Note: App Access Tokens cannot send chat messages
+        // Results are displayed in the UI instead
+        console.log(`🎉 Poll Results: "${data.winner?.option}" won with ${data.winner?.percentage}% of ${data.totalVotes} votes!`);
 
         // Reset fireworks after 3 seconds
         setTimeout(() => {
@@ -216,7 +196,7 @@ export default function SurveyPage() {
               onChange={(e) => setQuestion(e.target.value)}
             />
           </div>
-          
+
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="font-semibold text-gray-300">Options</label>
@@ -281,7 +261,7 @@ export default function SurveyPage() {
                       <span className="text-gray-300">{option}</span>
                       <span className="text-emerald-400 font-semibold">{voteCount} votes</span>
                     </div>
-                    <div 
+                    <div
                       className="absolute inset-0 bg-emerald-500/10 rounded-lg transition-all duration-500"
                       style={{ width: `${percentage}%` }}
                     />
@@ -290,7 +270,7 @@ export default function SurveyPage() {
               })}
             </div>
           </div>
-          
+
           <div className="flex gap-4">
             <button
               onClick={handleEndSurvey}
@@ -318,7 +298,7 @@ export default function SurveyPage() {
               <h2 className="text-2xl font-bold text-emerald-400 mb-2">Poll Results</h2>
               <p className="text-gray-300">Total votes: {totalVotes}</p>
             </div>
-            
+
             <div className="mt-6 space-y-4">
               {voteDetails.map((detail) => (
                 <div key={detail.option} className="relative">
@@ -334,7 +314,7 @@ export default function SurveyPage() {
                       <div className="text-sm text-gray-400">{detail.percentage}%</div>
                     </div>
                   </div>
-                  <div 
+                  <div
                     className="absolute inset-0 bg-emerald-500/20 rounded-lg transition-all duration-500"
                     style={{ width: `${detail.percentage}%` }}
                   />

@@ -3,23 +3,15 @@ import { NextResponse } from "next/server";
 const TOKEN_URL = process.env.TOKEN_URL as string;
 const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID as string;
 const CLIENT_SECRET = process.env.CLIENT_SECRET as string;
-const REDIRECT_URI = process.env.NEXT_PUBLIC_REDIRECT_URI as string;
 
+// App Access Token endpoint - uses client credentials grant
 export async function POST(req: Request) {
   try {
-    const { code, code_verifier } = await req.json();
-
-    if (!code || !code_verifier) {
-      return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
-    }
-
+    // For App Access Token, we use client_credentials grant type
     const body = new URLSearchParams({
-      grant_type: "authorization_code",
+      grant_type: "client_credentials",
       client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET, // Include only if required
-      code,
-      redirect_uri: REDIRECT_URI,
-      code_verifier,
+      client_secret: CLIENT_SECRET,
     });
 
     const response = await fetch(TOKEN_URL, {
@@ -33,7 +25,37 @@ export async function POST(req: Request) {
     const data = await response.json();
 
     if (!response.ok) {
-      return NextResponse.json({ error: data.error_description || "Token exchange failed" }, { status: response.status });
+      return NextResponse.json({ error: data.error_description || "Token request failed" }, { status: response.status });
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// GET method to retrieve App Access Token (since it doesn't require user interaction)
+export async function GET() {
+  try {
+    const body = new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+    });
+
+    const response = await fetch(TOKEN_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json({ error: data.error_description || "Token request failed" }, { status: response.status });
     }
 
     return NextResponse.json(data);
