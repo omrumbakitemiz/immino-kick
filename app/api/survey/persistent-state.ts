@@ -1,10 +1,7 @@
 import { Redis } from '@upstash/redis';
 
-// Initialize Upstash Redis client
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+// Initialize Redis using fromEnv() which automatically picks up Vercel KV environment variables
+const redis = Redis.fromEnv();
 
 interface SurveyState {
   userVotes: Record<string, string>; // user_id -> vote option
