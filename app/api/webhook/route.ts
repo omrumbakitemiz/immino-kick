@@ -57,29 +57,12 @@ export async function POST(req: NextRequest) {
 
     // Process vote if voting is active
     if (surveyState.votingActive) {
-      let voteOption: string | null = null;
-
-      // Check if message is a positive integer (1, 2, 3...)
-      if (/^[1-9]\d*$/.test(messageContent)) {
-        const optionIndex = parseInt(messageContent) - 1;
-        if (optionIndex >= 0 && optionIndex < surveyState.voteOptions.length) {
-          voteOption = messageContent; // Store the number
-          console.log(`✅ Processing numeric vote: ${messageContent} from ${senderUsername} (${senderId})`);
-        } else {
-          console.log(`🚫 Invalid option number: "${messageContent}" - only 1-${surveyState.voteOptions.length} allowed`);
-        }
-      }
-      // Check if message matches an option text (A, B, C...)
-      else if (surveyState.voteOptions.includes(messageContent)) {
-        const optionIndex = surveyState.voteOptions.indexOf(messageContent);
-        voteOption = (optionIndex + 1).toString(); // Convert to number format for storage
-        console.log(`✅ Processing text vote: "${messageContent}" -> ${voteOption} from ${senderUsername} (${senderId})`);
+      // Accept any alphanumeric input as a valid vote (letters, numbers, or combination)
+      if (/^[a-zA-Z0-9]+$/.test(messageContent)) {
+        console.log(`✅ Processing alphanumeric vote: "${messageContent}" from ${senderUsername} (${senderId})`);
+        await addVote(senderId, messageContent);
       } else {
-        console.log(`🚫 Invalid vote: "${messageContent}" - must be 1-${surveyState.voteOptions.length} or one of: ${surveyState.voteOptions.join(", ")}`);
-      }
-
-      if (voteOption) {
-        await addVote(senderId, voteOption);
+        console.log(`🚫 Invalid vote: "${messageContent}" - only alphanumeric characters allowed`);
       }
     } else {
       console.log("⏸️ Vote ignored - voting not active");
