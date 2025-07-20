@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSurveyState, setSurveyState, addVote } from "../survey/persistent-state";
+import { verifyKickWebhookSignature } from "../../../lib/kick-webhook-security";
 
 const webhookData: any[] = [];
 
@@ -11,17 +12,45 @@ export async function POST(req: NextRequest) {
     const eventType = headers.get("Kick-Event-Type");
     const messageId = headers.get("Kick-Event-Message-Id");
     const subscriptionId = headers.get("Kick-Event-Subscription-Id");
+    const timestamp = headers.get("Kick-Event-Message-Timestamp");
+    const signature = headers.get("Kick-Event-Signature");
 
     console.log("📨 Headers:", {
       eventType,
       messageId,
       subscriptionId,
-      timestamp: headers.get("Kick-Event-Message-Timestamp")
+      timestamp,
+      hasSignature: !!signature
     });
 
+    // Verify required headers
     if (!eventType) {
       console.log("❌ Missing Kick-Event-Type header");
       return NextResponse.json({ message: "Missing Kick-Event-Type header" }, { status: 400 });
+    }
+
+    if (!messageId || !timestamp || !signature) {
+      console.log("❌ Missing required security headers");
+      return NextResponse.json({ message: "Missing required security headers" }, { status: 401 });
+    }
+
+    // Get raw body for signature verification
+    const rawBody = await req.text();
+
+        // Verify webhook signature from Kick (skip in development mode)
+    const isDevelopmentMode = process.env.NODE_ENV === 'development' || process.env.SKIP_SIGNATURE_VERIFICATION === 'true';
+
+    if (isDevelopmentMode) {
+      console.log("🚧 DEVELOPMENT MODE: Skipping signature verification");
+    } else {
+      const isValidSignature = verifyKickWebhookSignature(messageId, timestamp, rawBody, signature);
+
+      if (!isValidSignature) {
+        console.log("🚫 Invalid webhook signature - potential unauthorized request");
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      }
+
+      console.log("✅ Webhook signature verified - request is authentic");
     }
 
     if (eventType !== "chat.message.sent") {
@@ -29,7 +58,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Ignored non-chat event" }, { status: 200 });
     }
 
-    const body = await req.json();
+    // Parse the JSON body (we already have rawBody for signature verification)
+    const body = JSON.parse(rawBody);
     console.log("💬 Raw chat message body:", JSON.stringify(body, null, 2));
 
     const messageContent = body.content?.trim();
