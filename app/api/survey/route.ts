@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { surveyState, resetSurvey, logStateInfo } from "./state";
+import { setSurveyState, resetSurveyState } from "./persistent-state";
 
 export async function POST(req: NextRequest) {
   try {
     console.log("🔵 Survey POST received - starting new poll");
-    logStateInfo("SURVEY_POST_START");
 
     const token = req.headers.get("Authorization");
 
@@ -17,17 +16,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request. Provide a question and options." }, { status: 400 });
     }
 
-    // Reset survey state
-    resetSurvey();
+    // Reset survey state in KV
+    await resetSurveyState();
 
-    // Set new survey data using the mutable object
-    surveyState.currentQuestion = body.question;
-    surveyState.voteOptions.splice(0, surveyState.voteOptions.length, ...body.options);
-    surveyState.votingActive = true;
+    // Set new survey data in KV
+    await setSurveyState({
+      currentQuestion: body.question,
+      voteOptions: body.options,
+      votingActive: true,
+      userVotes: {},
+    });
 
-    console.log("📊 Survey started:", surveyState.currentQuestion, surveyState.voteOptions);
-    console.log("📊 Voting active:", surveyState.votingActive);
-    logStateInfo("SURVEY_POST_AFTER_START");
+    console.log("📊 Survey started:", body.question, body.options);
+    console.log("📊 Voting active: true");
 
     // Note: App Access Tokens cannot send chat messages
     // Poll will work via webhook - users vote by typing numbers in chat
@@ -35,9 +36,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       message: "Survey started - users can vote by typing numbers in chat",
-      question: surveyState.currentQuestion,
-      options: surveyState.voteOptions,
-      votingActive: surveyState.votingActive,
+      question: body.question,
+      options: body.options,
+      votingActive: true,
     });
   } catch (error) {
     console.error(error);

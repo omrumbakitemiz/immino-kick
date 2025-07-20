@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { surveyState, logStateInfo } from "../survey/state";
+import { getSurveyState, setSurveyState, addVote } from "../survey/persistent-state";
 
 const webhookData: any[] = [];
 
 export async function POST(req: NextRequest) {
   console.log("🔵 Webhook POST received");
-  logStateInfo("WEBHOOK_POST_START");
 
   try {
     const headers = req.headers;
@@ -46,6 +45,9 @@ export async function POST(req: NextRequest) {
       isValidVote: /^[1-9]\d*$/.test(messageContent)
     });
 
+    // Load current state from KV
+    const surveyState = await getSurveyState();
+
     console.log("📊 Current survey state:", {
       votingActive: surveyState.votingActive,
       currentQuestion: surveyState.currentQuestion,
@@ -53,19 +55,34 @@ export async function POST(req: NextRequest) {
       existingVotesCount: Object.keys(surveyState.userVotes).length
     });
 
-    // Process vote if voting is active and message is a valid positive integer
-    if (surveyState.votingActive && /^[1-9]\d*$/.test(messageContent)) {
-      console.log(`✅ Processing vote: ${messageContent} from ${senderUsername} (${senderId})`);
-      surveyState.userVotes[senderId] = messageContent;
-      console.log("📈 Updated user votes:", surveyState.userVotes);
-      logStateInfo("WEBHOOK_POST_AFTER_VOTE");
-    } else {
-      if (!surveyState.votingActive) {
-        console.log("⏸️ Vote ignored - voting not active");
-        logStateInfo("WEBHOOK_POST_VOTING_INACTIVE");
-      } else if (!/^[1-9]\d*$/.test(messageContent)) {
-        console.log(`🚫 Invalid vote format: "${messageContent}" - must be positive integer`);
+    // Process vote if voting is active
+    if (surveyState.votingActive) {
+      let voteOption: string | null = null;
+
+      // Check if message is a positive integer (1, 2, 3...)
+      if (/^[1-9]\d*$/.test(messageContent)) {
+        const optionIndex = parseInt(messageContent) - 1;
+        if (optionIndex >= 0 && optionIndex < surveyState.voteOptions.length) {
+          voteOption = messageContent; // Store the number
+          console.log(`✅ Processing numeric vote: ${messageContent} from ${senderUsername} (${senderId})`);
+        } else {
+          console.log(`🚫 Invalid option number: "${messageContent}" - only 1-${surveyState.voteOptions.length} allowed`);
+        }
       }
+      // Check if message matches an option text (A, B, C...)
+      else if (surveyState.voteOptions.includes(messageContent)) {
+        const optionIndex = surveyState.voteOptions.indexOf(messageContent);
+        voteOption = (optionIndex + 1).toString(); // Convert to number format for storage
+        console.log(`✅ Processing text vote: "${messageContent}" -> ${voteOption} from ${senderUsername} (${senderId})`);
+      } else {
+        console.log(`🚫 Invalid vote: "${messageContent}" - must be 1-${surveyState.voteOptions.length} or one of: ${surveyState.voteOptions.join(", ")}`);
+      }
+
+      if (voteOption) {
+        await addVote(senderId, voteOption);
+      }
+    } else {
+      console.log("⏸️ Vote ignored - voting not active");
     }
 
     webhookData.unshift(body);
@@ -81,99 +98,120 @@ export async function POST(req: NextRequest) {
 // GET: Return current vote counts and status
 export async function GET() {
   console.log("🔵 Webhook GET received - fetching vote counts");
-  logStateInfo("WEBHOOK_GET_START");
 
-  // when returning the webhook data, we want to do some calculations on surveyState.userVotes
-  // we want to count the number of votes for each option, but count should be based on senderId
-  const votes: Record<string, number> = {};
+  try {
+    // Load state from KV
+    const surveyState = await getSurveyState();
 
-  console.log("📊 Processing user votes:", surveyState.userVotes);
+    // Calculate vote counts from userVotes
+    const votes: Record<string, number> = {};
+    console.log("📊 Processing user votes:", surveyState.userVotes);
 
-  for (const vote of Object.values(surveyState.userVotes || {})) {
-    votes[vote] = (votes[vote] || 0) + 1;
+    for (const vote of Object.values(surveyState.userVotes || {})) {
+      votes[vote] = (votes[vote] || 0) + 1;
+    }
+
+    console.log("📈 Calculated vote counts:", votes);
+    console.log("📊 Survey state:", {
+      votingActive: surveyState.votingActive,
+      totalUniqueVoters: Object.keys(surveyState.userVotes).length
+    });
+
+    return NextResponse.json({
+      votes,
+      votingActive: surveyState.votingActive,
+    });
+  } catch (error) {
+    console.error("❌ Error in GET:", error);
+    return NextResponse.json({
+      votes: {},
+      votingActive: false,
+    });
   }
-
-  console.log("📈 Calculated vote counts:", votes);
-  console.log("📊 Survey state:", {
-    votingActive: surveyState.votingActive,
-    totalUniqueVoters: Object.keys(surveyState.userVotes).length
-  });
-
-  return NextResponse.json({
-    votes,
-    votingActive: surveyState.votingActive,
-  });
 }
 
 // PUT: End voting and determine the winner (counting each user's last vote only)
 export async function PUT() {
   console.log("🔵 Webhook PUT received - ending survey");
-  logStateInfo("WEBHOOK_PUT_START");
 
-  surveyState.votingActive = false;
-  console.log("⏹️ Voting deactivated");
+  try {
+    // Load and update state
+    await setSurveyState({ votingActive: false });
+    const surveyState = await getSurveyState();
 
-  // Tally votes by iterating over userVotes (user_id -> vote option)
-  const voteCounts: Record<string, number> = {};
-  for (const vote of Object.values(surveyState.userVotes || {})) {
-    voteCounts[vote] = (voteCounts[vote] || 0) + 1;
-  }
+    console.log("⏹️ Voting deactivated");
 
-  // Calculate total votes
-  let totalVotes = 0;
-  for (const count of Object.values(voteCounts)) {
-    totalVotes += count;
-  }
-
-  console.log("📊 Final results:", {
-    voteCounts,
-    totalVotes,
-    totalUniqueVoters: Object.keys(surveyState.userVotes).length
-  });
-
-  // Calculate percentages and create vote details
-  const voteDetails = Object.entries(voteCounts).map(([option, count]) => ({
-    option,
-    count,
-    percentage: totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0
-  }));
-
-  // Determine the winning option
-  let winnerOption: string | null = null;
-  let maxVotes = 0;
-  for (const {option, count} of voteDetails) {
-    if (count > maxVotes) {
-      maxVotes = count;
-      winnerOption = option;
+    // Tally votes by iterating over userVotes (user_id -> vote option)
+    const voteCounts: Record<string, number> = {};
+    for (const vote of Object.values(surveyState.userVotes || {})) {
+      voteCounts[vote] = (voteCounts[vote] || 0) + 1;
     }
+
+    // Calculate total votes
+    let totalVotes = 0;
+    for (const count of Object.values(voteCounts)) {
+      totalVotes += count;
+    }
+
+    console.log("📊 Final results:", {
+      voteCounts,
+      totalVotes,
+      totalUniqueVoters: Object.keys(surveyState.userVotes).length
+    });
+
+    // Calculate percentages and create vote details
+    const voteDetails = Object.entries(voteCounts).map(([option, count]) => ({
+      option,
+      count,
+      percentage: totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0
+    }));
+
+    // Determine the winning option
+    let winnerOption: string | null = null;
+    let maxVotes = 0;
+    for (const {option, count} of voteDetails) {
+      if (count > maxVotes) {
+        maxVotes = count;
+        winnerOption = option;
+      }
+    }
+
+    const winner = winnerOption ? {
+      option: winnerOption,
+      count: maxVotes,
+      percentage: Math.round((maxVotes / totalVotes) * 100)
+    } : null;
+
+    console.log("🏆 Winner determined:", winner);
+
+    return NextResponse.json({
+      message: "Voting ended",
+      winner,
+      votes: voteCounts,
+      voteDetails,
+      totalVotes
+    });
+  } catch (error) {
+    console.error("❌ Error in PUT:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  const winner = winnerOption ? {
-    option: winnerOption,
-    count: maxVotes,
-    percentage: Math.round((maxVotes / totalVotes) * 100)
-  } : null;
-
-  console.log("🏆 Winner determined:", winner);
-
-  return NextResponse.json({
-    message: "Voting ended",
-    winner,
-    votes: voteCounts,
-    voteDetails,
-    totalVotes
-  });
 }
 
 // DELETE: Reset the survey (manual reset)
 export async function DELETE() {
   console.log("🔵 Webhook DELETE received - resetting survey");
-  logStateInfo("WEBHOOK_DELETE_START");
 
-  surveyState.userVotes = {};
-  surveyState.votingActive = true;
+  try {
+    await setSurveyState({
+      userVotes: {},
+      votingActive: true,
+    });
 
-  console.log("🔄 Survey reset - voting reactivated");
+    console.log("🔄 Survey reset - voting reactivated");
 
-  return NextResponse.json({ message: "Voting reset" });
+    return NextResponse.json({ message: "Voting reset" });
+  } catch (error) {
+    console.error("❌ Error in DELETE:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
