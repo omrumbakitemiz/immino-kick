@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Fireworks from "../components/Fireworks";
+import LoginForm from "../../components/LoginForm";
 
 interface VoteCounts {
   [key: string]: number;
@@ -14,6 +15,10 @@ interface VoteDetail {
 }
 
 export default function SurveyPage() {
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
   // Survey creation states
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
@@ -34,6 +39,26 @@ export default function SurveyPage() {
   // Timer states
   const [timerEndTime, setTimerEndTime] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
+
+  // Check authentication status on component mount
+  useEffect(() => {
+    const checkAuth = () => {
+      const authenticated = sessionStorage.getItem("app_authenticated") === "true";
+      setIsAuthenticated(authenticated);
+      setAuthChecked(true);
+    };
+
+    checkAuth();
+  }, []);
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("app_authenticated");
+    setIsAuthenticated(false);
+  };
 
   // Timer countdown effect
   useEffect(() => {
@@ -216,6 +241,20 @@ export default function SurveyPage() {
     setOptions(newOptions);
   };
 
+  // Show loading while checking authentication
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-800 border-t-emerald-500" />
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={handleLogin} />;
+  }
+
   return (
     <div className="max-w-2xl mx-auto p-6 bg-gray-900 min-h-screen text-gray-100 flex flex-col space-y-6 rounded-md relative">
       <Fireworks isActive={showFireworks} />
@@ -225,9 +264,17 @@ export default function SurveyPage() {
         </div>
       )}
 
-      <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent">
-        Create Poll
-      </h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent">
+          Create Poll
+        </h1>
+        <button
+          onClick={handleLogout}
+          className="px-4 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
+        >
+          Logout
+        </button>
+      </div>
 
       {/* Survey Creation Form */}
       {!votingActive && !winner && (
