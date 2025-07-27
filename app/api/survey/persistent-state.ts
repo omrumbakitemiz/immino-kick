@@ -10,6 +10,10 @@ interface SurveyState {
   voteOptions: string[];
   createdAt: string;
   updatedAt: string;
+  // Timer-related fields
+  timerDuration?: number; // Duration in seconds (60, 90, 180)
+  timerStartTime?: string; // ISO timestamp when poll started
+  timerEndTime?: string; // ISO timestamp when poll should end
 }
 
 const DEFAULT_STATE: SurveyState = {
@@ -19,6 +23,9 @@ const DEFAULT_STATE: SurveyState = {
   voteOptions: [],
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
+  timerDuration: undefined,
+  timerStartTime: undefined,
+  timerEndTime: undefined,
 };
 
 const STATE_KEY = "survey:current";

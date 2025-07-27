@@ -17,6 +17,7 @@ export default function SurveyPage() {
   // Survey creation states
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
+  const [timerDuration, setTimerDuration] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Live survey states
@@ -30,6 +31,37 @@ export default function SurveyPage() {
   const [intervalTime] = useState(5000);
   const [showFireworks, setShowFireworks] = useState(false);
 
+  // Timer states
+  const [timerEndTime, setTimerEndTime] = useState<string | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+
+  // Timer countdown effect
+  useEffect(() => {
+    let countdownInterval: any;
+
+    if (votingActive && timerEndTime) {
+      const updateCountdown = () => {
+        const now = new Date().getTime();
+        const endTime = new Date(timerEndTime).getTime();
+        const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
+
+        setTimeRemaining(remaining);
+
+        // Auto-end poll when timer reaches 0
+        if (remaining === 0 && votingActive) {
+          handleEndSurvey();
+        }
+      };
+
+      updateCountdown();
+      countdownInterval = setInterval(updateCountdown, 1000);
+    }
+
+    return () => {
+      if (countdownInterval) clearInterval(countdownInterval);
+    };
+  }, [votingActive, timerEndTime]);
+
   // Polling for live vote counts when survey is active
   useEffect(() => {
     let interval: any;
@@ -39,6 +71,11 @@ export default function SurveyPage() {
         const data = await res.json();
         setVotes(data.votes);
         setVotingActive(data.votingActive);
+
+        // Update timer info if available
+        if (data.timerEndTime) {
+          setTimerEndTime(data.timerEndTime);
+        }
       } catch (error) {
         console.error("Error fetching votes:", error);
       }
@@ -77,7 +114,8 @@ export default function SurveyPage() {
         },
         body: JSON.stringify({
           question,
-          options: validOptions
+          options: validOptions,
+          timerDuration
         }),
       });
       const data = await res.json();
@@ -87,6 +125,11 @@ export default function SurveyPage() {
         setVotes({});
         setWinner(null);
         setVotingActive(true);
+
+        // Set timer info if enabled
+        if (data.timerEndTime) {
+          setTimerEndTime(data.timerEndTime);
+        }
       } else {
         alert(data.error || "Failed to start survey.");
       }
@@ -141,6 +184,9 @@ export default function SurveyPage() {
         setCurrentOptions([]);
         setQuestion("");
         setOptions(["", ""]);
+        setTimerDuration(null);
+        setTimerEndTime(null);
+        setTimeRemaining(0);
       } else {
         alert("Failed to reset survey.");
       }
@@ -198,6 +244,56 @@ export default function SurveyPage() {
           </div>
 
           <div>
+            <label className="block mb-3 font-semibold text-gray-300">Timer Duration</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setTimerDuration(null)}
+                className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  timerDuration === null
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                    : 'bg-gray-800/50 border border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
+                }`}
+              >
+                Manual End
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimerDuration(60)}
+                className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  timerDuration === 60
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                    : 'bg-gray-800/50 border border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
+                }`}
+              >
+                60s
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimerDuration(90)}
+                className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  timerDuration === 90
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                    : 'bg-gray-800/50 border border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
+                }`}
+              >
+                90s
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimerDuration(180)}
+                className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  timerDuration === 180
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                    : 'bg-gray-800/50 border border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
+                }`}
+              >
+                180s
+              </button>
+            </div>
+          </div>
+
+          <div>
             <div className="flex justify-between items-center mb-2">
               <label className="font-semibold text-gray-300">Options</label>
               <span className="text-sm text-gray-400">{options.length}/6 options</span>
@@ -249,6 +345,28 @@ export default function SurveyPage() {
       {/* Live Vote Count Display */}
       {votingActive && (
         <div className="space-y-6">
+          {/* Timer Countdown Display */}
+          {timerEndTime && (
+            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+              <div className="flex items-center justify-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-2xl">⏱️</span>
+                  <div className="text-center">
+                    <div className={`text-3xl font-bold ${timeRemaining <= 10 ? 'text-red-400 animate-pulse' : 'text-emerald-400'}`}>
+                      {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+                    </div>
+                    <div className="text-sm text-gray-400">Time remaining</div>
+                  </div>
+                </div>
+              </div>
+              {timeRemaining <= 10 && timeRemaining > 0 && (
+                <div className="text-center mt-2 text-red-400 text-sm animate-pulse">
+                  ⚠️ Poll ending soon!
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="p-6 bg-gray-800/50 border border-gray-700 rounded-lg">
             <h2 className="text-2xl font-semibold mb-4 text-emerald-400">{currentQuestion}</h2>
             <div className="space-y-4">

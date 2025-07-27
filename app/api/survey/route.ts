@@ -16,8 +16,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request. Provide a question and options." }, { status: 400 });
     }
 
+    // Validate timer duration if provided
+    const timerDuration = body.timerDuration;
+    if (timerDuration && ![60, 90, 180].includes(timerDuration)) {
+      return NextResponse.json({ error: "Invalid timer duration. Must be 60, 90, or 180 seconds." }, { status: 400 });
+    }
+
     // Reset survey state in KV
     await resetSurveyState();
+
+    // Calculate timer timestamps if timer is enabled
+    const now = new Date();
+    const timerStartTime = timerDuration ? now.toISOString() : undefined;
+    const timerEndTime = timerDuration ? new Date(now.getTime() + timerDuration * 1000).toISOString() : undefined;
 
     // Set new survey data in KV
     await setSurveyState({
@@ -25,9 +36,13 @@ export async function POST(req: NextRequest) {
       voteOptions: body.options,
       votingActive: true,
       userVotes: {},
+      timerDuration,
+      timerStartTime,
+      timerEndTime,
     });
 
     console.log("📊 Survey started:", body.question, body.options);
+    console.log("⏱️ Timer:", timerDuration ? `${timerDuration}s (ends at ${timerEndTime})` : "disabled");
     console.log("📊 Voting active: true");
 
     // Note: App Access Tokens cannot send chat messages
@@ -39,6 +54,9 @@ export async function POST(req: NextRequest) {
       question: body.question,
       options: body.options,
       votingActive: true,
+      timerDuration,
+      timerStartTime,
+      timerEndTime,
     });
   } catch (error) {
     console.error(error);

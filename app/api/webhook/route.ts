@@ -116,6 +116,19 @@ export async function GET() {
     // Load state from KV
     const surveyState = await getSurveyState();
 
+    // Check if timer has expired and automatically end poll
+    if (surveyState.votingActive && surveyState.timerEndTime) {
+      const now = new Date();
+      const endTime = new Date(surveyState.timerEndTime);
+
+      if (now >= endTime) {
+        console.log("⏰ Timer expired - automatically ending poll");
+        await setSurveyState({ votingActive: false });
+        // Update the local state to reflect the change
+        surveyState.votingActive = false;
+      }
+    }
+
     // Calculate vote counts from userVotes
     const votes: Record<string, number> = {};
     console.log("📊 Processing user votes:", surveyState.userVotes);
@@ -127,18 +140,29 @@ export async function GET() {
     console.log("📈 Calculated vote counts:", votes);
     console.log("📊 Survey state:", {
       votingActive: surveyState.votingActive,
-      totalUniqueVoters: Object.keys(surveyState.userVotes).length
+      totalUniqueVoters: Object.keys(surveyState.userVotes).length,
+      timerInfo: surveyState.timerDuration ? {
+        duration: surveyState.timerDuration,
+        startTime: surveyState.timerStartTime,
+        endTime: surveyState.timerEndTime
+      } : null
     });
 
     return NextResponse.json({
       votes,
       votingActive: surveyState.votingActive,
+      timerDuration: surveyState.timerDuration,
+      timerStartTime: surveyState.timerStartTime,
+      timerEndTime: surveyState.timerEndTime,
     });
   } catch (error) {
     console.error("❌ Error in GET:", error);
     return NextResponse.json({
       votes: {},
       votingActive: false,
+      timerDuration: undefined,
+      timerStartTime: undefined,
+      timerEndTime: undefined,
     });
   }
 }
