@@ -87,12 +87,21 @@ export async function POST(req: NextRequest) {
 
     // Process vote if voting is active
     if (surveyState.votingActive) {
-      // Accept any alphanumeric input as a valid vote (letters, numbers, or combination)
-      if (/^[a-zA-Z0-9]+$/.test(messageContent)) {
-        console.log(`✅ Processing alphanumeric vote: "${messageContent}" from ${senderUsername} (${senderId})`);
-        await addVote(senderId, messageContent);
+      // Only accept numeric votes (1, 2, 3, etc.)
+      if (/^[1-9]\d*$/.test(messageContent)) {
+        const voteNumber = parseInt(messageContent);
+        const maxOptions = surveyState.voteOptions.length;
+
+        // Check if vote number corresponds to a valid option
+        if (voteNumber >= 1 && voteNumber <= maxOptions) {
+          const selectedOption = surveyState.voteOptions[voteNumber - 1]; // Convert to 0-based index
+          console.log(`✅ Processing vote: "${messageContent}" -> "${selectedOption}" from ${senderUsername} (${senderId})`);
+          await addVote(senderId, selectedOption); // Store the actual option text, not the number
+        } else {
+          console.log(`🚫 Invalid vote: "${messageContent}" - must be between 1 and ${maxOptions}`);
+        }
       } else {
-        console.log(`🚫 Invalid vote: "${messageContent}" - only alphanumeric characters allowed`);
+        console.log(`🚫 Invalid vote: "${messageContent}" - only numbers (1, 2, 3, etc.) allowed`);
       }
     } else {
       console.log("⏸️ Vote ignored - voting not active");

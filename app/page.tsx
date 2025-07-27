@@ -3,13 +3,38 @@
 import { useEffect, useRef, useState } from "react";
 import SurveyPage from "@/app/survey/page";
 import SubscribeEvents from "@/components/subscribe-events";
+import LoginForm from "@/components/LoginForm";
 
 export default function Home() {
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [clickCount, setClickCount] = useState(0);
   const clickTimerRef = useRef<NodeJS.Timeout>(null);
+
+  // Check authentication status on component mount
+  useEffect(() => {
+    const checkAuth = () => {
+      const authenticated = sessionStorage.getItem("app_authenticated") === "true";
+      setIsAuthenticated(authenticated);
+      setAuthChecked(true);
+    };
+
+    checkAuth();
+  }, []);
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("app_authenticated");
+    setIsAuthenticated(false);
+  };
 
   useEffect(() => {
     async function getAppAccessToken() {
@@ -84,6 +109,20 @@ export default function Home() {
     });
   };
 
+  // Show loading while checking authentication
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-800 border-t-emerald-500" />
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={handleLogin} />;
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
@@ -116,7 +155,13 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-gray-900 text-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-end mb-8">
+          <div className="flex justify-between items-center mb-8">
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
+            >
+              Logout
+            </button>
             <button
               onClick={handleTokenRefresh}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"

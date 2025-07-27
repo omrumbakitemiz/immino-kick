@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Fireworks from "../components/Fireworks";
-import LoginForm from "../../components/LoginForm";
 
 interface VoteCounts {
   [key: string]: number;
@@ -15,10 +14,6 @@ interface VoteDetail {
 }
 
 export default function SurveyPage() {
-  // Authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [authChecked, setAuthChecked] = useState(false);
-
   // Survey creation states
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
@@ -39,26 +34,6 @@ export default function SurveyPage() {
   // Timer states
   const [timerEndTime, setTimerEndTime] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
-
-  // Check authentication status on component mount
-  useEffect(() => {
-    const checkAuth = () => {
-      const authenticated = sessionStorage.getItem("app_authenticated") === "true";
-      setIsAuthenticated(authenticated);
-      setAuthChecked(true);
-    };
-
-    checkAuth();
-  }, []);
-
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("app_authenticated");
-    setIsAuthenticated(false);
-  };
 
   // Timer countdown effect
   useEffect(() => {
@@ -96,6 +71,10 @@ export default function SurveyPage() {
         const data = await res.json();
         setVotes(data.votes);
         setVotingActive(data.votingActive);
+
+        // Calculate total votes from the current vote counts
+        const total = Object.values(data.votes).reduce((sum: number, count: any) => sum + (count || 0), 0);
+        setTotalVotes(total);
 
         // Update timer info if available
         if (data.timerEndTime) {
@@ -241,20 +220,6 @@ export default function SurveyPage() {
     setOptions(newOptions);
   };
 
-  // Show loading while checking authentication
-  if (!authChecked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-800 border-t-emerald-500" />
-      </div>
-    );
-  }
-
-  // Show login form if not authenticated
-  if (!isAuthenticated) {
-    return <LoginForm onLogin={handleLogin} />;
-  }
-
   return (
     <div className="max-w-2xl mx-auto p-6 bg-gray-900 min-h-screen text-gray-100 flex flex-col space-y-6 rounded-md relative">
       <Fireworks isActive={showFireworks} />
@@ -264,17 +229,9 @@ export default function SurveyPage() {
         </div>
       )}
 
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent">
-          Create Poll
-        </h1>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
-        >
-          Logout
-        </button>
-      </div>
+      <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent">
+        Create Poll
+      </h1>
 
       {/* Survey Creation Form */}
       {!votingActive && !winner && (
@@ -416,6 +373,14 @@ export default function SurveyPage() {
 
           <div className="p-6 bg-gray-800/50 border border-gray-700 rounded-lg">
             <h2 className="text-2xl font-semibold mb-4 text-emerald-400">{currentQuestion}</h2>
+
+            {/* Voting Instructions */}
+            <div className="mb-4 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+              <p className="text-sm text-blue-300">
+                💬 <strong>How to vote:</strong> Type the option number in chat (1, 2, 3, etc.)
+              </p>
+            </div>
+
             <div className="space-y-4">
               {currentOptions.map((option, index) => {
                 const voteCount = votes[option] || 0;
@@ -423,7 +388,12 @@ export default function SurveyPage() {
                 return (
                   <div key={index} className="relative">
                     <div className="flex justify-between items-center p-3 bg-gray-800 rounded-lg z-10 relative">
-                      <span className="text-gray-300">{option}</span>
+                      <div className="flex items-center space-x-3">
+                        <span className="bg-emerald-500 text-white text-sm font-bold px-2 py-1 rounded">
+                          {index + 1}
+                        </span>
+                        <span className="text-gray-300">{option}</span>
+                      </div>
                       <span className="text-emerald-400 font-semibold">{voteCount} votes</span>
                     </div>
                     <div
@@ -465,26 +435,37 @@ export default function SurveyPage() {
             </div>
 
             <div className="mt-6 space-y-4">
-              {voteDetails.map((detail) => (
-                <div key={detail.option} className="relative">
-                  <div className="flex justify-between items-center p-3 bg-gray-800/80 rounded-lg z-10 relative">
-                    <div>
-                      <span className="text-gray-300">{detail.option}</span>
-                      {detail === winner && (
-                        <span className="ml-2 text-emerald-400">👑 Winner</span>
-                      )}
+              {voteDetails.map((detail, index) => {
+                // Find the option index to show the number
+                const optionIndex = currentOptions.findIndex(opt => opt === detail.option);
+                const optionNumber = optionIndex !== -1 ? optionIndex + 1 : index + 1;
+
+                return (
+                  <div key={detail.option} className="relative">
+                    <div className="flex justify-between items-center p-3 bg-gray-800/80 rounded-lg z-10 relative">
+                      <div className="flex items-center space-x-3">
+                        <span className="bg-gray-600 text-white text-sm font-bold px-2 py-1 rounded">
+                          {optionNumber}
+                        </span>
+                        <div>
+                          <span className="text-gray-300">{detail.option}</span>
+                          {detail === winner && (
+                            <span className="ml-2 text-emerald-400">👑 Winner</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-emerald-400 font-semibold">{detail.count} votes</div>
+                        <div className="text-sm text-gray-400">{detail.percentage}%</div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-emerald-400 font-semibold">{detail.count} votes</div>
-                      <div className="text-sm text-gray-400">{detail.percentage}%</div>
-                    </div>
+                    <div
+                      className="absolute inset-0 bg-emerald-500/20 rounded-lg transition-all duration-500"
+                      style={{ width: `${detail.percentage}%` }}
+                    />
                   </div>
-                  <div
-                    className="absolute inset-0 bg-emerald-500/20 rounded-lg transition-all duration-500"
-                    style={{ width: `${detail.percentage}%` }}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
